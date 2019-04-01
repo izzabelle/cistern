@@ -4,6 +4,7 @@ mod message_buffer;
 mod message_handler;
 
 use lazy_static::lazy_static;
+use message_buffer::MessageBuffer;
 use regex::Regex;
 use serenity::{
     client::{Client, Context, EventHandler},
@@ -12,7 +13,7 @@ use serenity::{
         channel::Message,
         gateway::Ready,
         guild::Member,
-        id::{ChannelId, GuildId},
+        id::{ChannelId, GuildId, MessageId},
         user::User,
     },
 };
@@ -26,6 +27,9 @@ struct Opt {
     /// runs bot in production mode, defaults to development
     #[structopt(short = "p", long = "prod")]
     prod: bool,
+    /// create new message buffer with given length
+    #[structopt(long = "buffer")]
+    buf_length: Option<usize>,
 }
 
 struct Handler;
@@ -45,6 +49,15 @@ impl EventHandler for Handler {
         if message.author.id == CONFIG.lock().unwrap().bot_id {
             return;
         }
+
+        if message.guild_id == Some(GuildId::from(CONFIG.lock().unwrap().guild_id)) {
+            MESSAGE_BUFFER.lock().unwrap().add(&message);
+            match MESSAGE_BUFFER.lock().unwrap().save() {
+                Ok(_) => {}
+                Err(e) => panic!("Error occurred: {}", e),
+            };
+        }
+
         message_handler::generic_catch(&message);
         message_handler::antiowo::furry_shit_catch(&message);
     }
@@ -75,7 +88,23 @@ impl EventHandler for Handler {
             let _ = channel.say(format!("`{}` is no longer on the server", user.name));
         }
     }
-    /*fn message_delete(&self, _ctx: Context, channel_id: ChannelId, message_id: MessageId) {}*/
+    fn message_delete(&self, _ctx: Context, channel_id: ChannelId, message_id: MessageId) {
+        let message: Option<Message> = MESSAGE_BUFFER.lock().unwrap().get(message_id, channel_id);
+        match message {
+            Some(m) => {
+                if m.guild_id == Some(GuildId::from(CONFIG.lock().unwrap().guild_id)) {
+                    let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
+                    let _ = channel.say(format!(
+                        "`{}` deleted a message in `{}`:```{}```",
+                        m.author.name,
+                        m.channel_id.name().unwrap(),
+                        m.content
+                    ));
+                }
+            }
+            None => {}
+        }
+    }
 }
 
 lazy_static! {
@@ -86,11 +115,35 @@ lazy_static! {
             Ok(r) => r,
             Err(e) => panic!("Error occurred: {:?}", e),
         };
+    pub static ref MESSAGE_BUFFER: Mutex<MessageBuffer> = match MessageBuffer::load() {
+        Ok(b) => Mutex::new(b),
+        Err(e) => panic!("Error occurred: {:?}", e),
+    };
 }
 
 fn main() {
     let _ = TIME.elapsed();
     let opt = Opt::from_args();
+
+    match opt.buf_length {
+        Some(max_length) => {
+            println!(
+                "creating new message buffer with length of {}...",
+                &max_length
+            );
+            let buf: MessageBuffer = MessageBuffer::new(max_length);
+            match buf.save() {
+                Ok(_) => println!("Success!"),
+                Err(e) => {
+                    println!("Error occurred: {:?}", e);
+                    std::process::exit(1);
+                }
+            };
+            std::process::exit(0);
+        }
+        None => {}
+    }
+
     let mut token: String;
     match opt.prod {
         true => {
@@ -102,6 +155,7 @@ fn main() {
             token = CONFIG.lock().unwrap().dev_token.clone();
         }
     }
+
     let mut prefix: String;
     prefix = CONFIG.lock().unwrap().command_prefix.clone();
 
