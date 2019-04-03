@@ -1,3 +1,4 @@
+mod log_handler;
 mod message_handler;
 
 use crate::{CONFIG, MESSAGE_BUFFER, TIME};
@@ -43,17 +44,11 @@ impl EventHandler for Handler {
     }
 
     fn guild_ban_addition(&self, _ctx: Context, guild_id: GuildId, banned_user: User) {
-        if guild_id == CONFIG.lock().unwrap().guild_id {
-            let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
-            let _ = channel.say(format!("`{}` has received a ban", banned_user.name));
-        }
+        log_handler::banned(guild_id, banned_user);
     }
 
     fn guild_ban_removal(&self, _ctx: Context, guild_id: GuildId, unbanned_user: User) {
-        if guild_id == CONFIG.lock().unwrap().guild_id {
-            let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
-            let _ = channel.say(format!("`{}` ban has been revoked", unbanned_user.name));
-        }
+        log_handler::unbanned(guild_id, unbanned_user);
     }
 
     fn guild_member_removal(
@@ -63,26 +58,10 @@ impl EventHandler for Handler {
         user: User,
         _member: Option<Member>,
     ) {
-        if guild_id == CONFIG.lock().unwrap().guild_id {
-            let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
-            let _ = channel.say(format!("`{}` is no longer on the server", user.name));
-        }
+        log_handler::removed(guild_id, user);
     }
+
     fn message_delete(&self, _ctx: Context, channel_id: ChannelId, message_id: MessageId) {
-        let message: Option<Message> = MESSAGE_BUFFER.lock().unwrap().get(message_id, channel_id);
-        match message {
-            Some(m) => {
-                if m.guild_id == Some(GuildId::from(CONFIG.lock().unwrap().guild_id)) {
-                    let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
-                    let _ = channel.say(format!(
-                        "`{}` deleted a message in `{}`:```{}```",
-                        m.author.name,
-                        m.channel_id.name().unwrap(),
-                        m.content
-                    ));
-                }
-            }
-            None => {}
-        }
+        log_handler::deleted(channel_id, message_id);
     }
 }
