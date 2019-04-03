@@ -3,6 +3,25 @@ use serenity::model::channel::Message;
 use std::fs::read_to_string;
 use std::io::Error;
 
+pub fn generic_catch(message: &Message) {
+    if message.content.contains("consume") {
+        println!("{:?} consumed", message.author.name);
+        let _ = message.channel_id.say("<:consume:441314166851239956>");
+    }
+    if message.content.contains("supreme") {
+        println!("{:?} is supreme", message.author.name);
+        let _ = message.channel_id.say("https://i.imgur.com/IF1Bqhk.png");
+    }
+    if message.content.contains("pissdrinking buttcuck") {
+        println!("{:?} thanks renny, very cool", message.author.name);
+        let _ = message.channel_id.say("https://i.imgur.com/g2wo1Kh.png");
+    }
+    if message.content.to_lowercase().as_str() == "amy is" {
+        println!("{:?} knows the truth", message.author.name);
+        let _ = message.channel_id.say("a bottom");
+    }
+}
+
 pub fn furry_shit_catch(message: &Message) {
     match crate::OWO_REGEX.captures(message.content.as_str()) {
         Some(_) => match check_exceptions(message) {
