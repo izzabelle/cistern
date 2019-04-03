@@ -4,7 +4,6 @@ use serenity::{
     model::id::{ChannelId, MessageId},
 };
 use std::io::Error;
-use std::ops::{Index, IndexMut};
 
 #[derive(Serialize, Deserialize)]
 pub struct MessageBuffer {
@@ -46,19 +45,5 @@ impl MessageBuffer {
             }
         }
         None
-    }
-}
-
-impl Index<usize> for MessageBuffer {
-    type Output = Message;
-
-    fn index(&self, idx: usize) -> &Message {
-        &self.buffer[idx]
-    }
-}
-
-impl IndexMut<usize> for MessageBuffer {
-    fn index_mut(&mut self, idx: usize) -> &mut Message {
-        &mut self.buffer[idx]
     }
 }
