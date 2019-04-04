@@ -26,7 +26,7 @@ pub fn unbanned(guild_id: GuildId, unbanned_user: User) {
         let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
         let _ = channel.send_message(|msg| {
             msg.embed(|e| {
-                e.title("User banned")
+                e.title("User unbanned")
                     .description(format!("`{}` ban has been revoked", unbanned_user.name))
                     .colour(Colour::DARK_GREEN)
             })
@@ -39,7 +39,7 @@ pub fn removed(guild_id: GuildId, user: User) {
         let channel = ChannelId::from(CONFIG.lock().unwrap().bot_log_id.clone());
         let _ = channel.send_message(|msg| {
             msg.embed(|e| {
-                e.title("User banned")
+                e.title("User removed")
                     .description(format!("`{}` is no longer on the server", user.name))
                     .colour(Colour::DARK_GREEN)
             })
